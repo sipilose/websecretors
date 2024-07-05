@@ -1,0 +1,88 @@
+import requests
+from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
+import os
+
+# Constants
+URL = "https://www.yourwebsite.com"
+KEYWORDS = ["used cars", "buy used cars", "sell used cars"]
+
+# Function to fetch page content
+def fetch_page_content(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.text
+    else:
+        print(f"Failed to fetch {url}")
+        return None
+
+# Function to extract meta tags
+def extract_meta_tags(content):
+    soup = BeautifulSoup(content, 'html.parser')
+    title = soup.title.string if soup.title else ''
+    meta_description = ''
+    meta_keywords = ''
+    for meta in soup.find_all('meta'):
+        if 'name' in meta.attrs:
+            if meta.attrs['name'].lower() == 'description':
+                meta_description = meta.attrs['content']
+            elif meta.attrs['name'].lower() == 'keywords':
+                meta_keywords = meta.attrs['content']
+    return title, meta_description, meta_keywords
+
+# Function to generate meta tags
+def generate_meta_tags(title, description, keywords):
+    meta_tags = f"""
+    <title>{title}</title>
+    <meta name="description" content="{description}">
+    <meta name="keywords" content="{keywords}">
+    """
+    return meta_tags
+
+# Function to create an XML sitemap
+def create_sitemap(urls):
+    urlset = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    for url in urls:
+        url_element = ET.SubElement(urlset, "url")
+        loc = ET.SubElement(url_element, "loc")
+        loc.text = url
+        changefreq = ET.SubElement(url_element, "changefreq")
+        changefreq.text = "daily"
+        priority = ET.SubElement(url_element, "priority")
+        priority.text = "0.8"
+    
+    tree = ET.ElementTree(urlset)
+    tree.write("sitemap.xml", encoding='utf-8', xml_declaration=True)
+
+# Function to generate SEO content
+def generate_seo_content(keywords):
+    content = "Your trusted marketplace for buying and selling quality used vehicles. " + \
+              " ".join([f"{keyword} available now." for keyword in keywords])
+    return content
+
+# Main function
+def main():
+    homepage_content = fetch_page_content(URL)
+    if homepage_content:
+        title, description, keywords = extract_meta_tags(homepage_content)
+        if not title:
+            title = "Your Website Title"
+        if not description:
+            description = "Default description for your website."
+        if not keywords:
+            keywords = ", ".join(KEYWORDS)
+        
+        meta_tags = generate_meta_tags(title, description, keywords)
+        print("Generated Meta Tags:")
+        print(meta_tags)
+        
+        seo_content = generate_seo_content(KEYWORDS)
+        print("Generated SEO Content:")
+        print(seo_content)
+        
+        urls = [URL]
+        create_sitemap(urls)
+        print("Sitemap created as sitemap.xml")
+
+if __name__ == "__main__":
+    main()
